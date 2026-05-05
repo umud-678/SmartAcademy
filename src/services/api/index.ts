@@ -7,7 +7,7 @@ export const apiPaths = {
     me: '/auth/me',
   },
   student: {
-    dashboard: '/student/dashboard',
+    dashboard: '/student/profile',
     attendance: '/student/attendance',
     payments: '/student/payments',
     materials: '/student/materials',
@@ -19,7 +19,7 @@ export const apiPaths = {
     schedule: '/teacher/schedule',
   },
   admin: {
-    dashboard: '/admin',
+    dashboard: '/admin/dashboard',
     students: '/admin/students',
     teachers: '/admin/teachers',
     groups: '/admin/groups',

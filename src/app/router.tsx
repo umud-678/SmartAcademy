@@ -1,3 +1,4 @@
+import { Box, CircularProgress } from '@mui/material'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProtectedLayout } from '@/layouts/ProtectedLayout'
@@ -34,7 +35,14 @@ import { TeacherSchedulePage } from '@/pages/teacher/TeacherSchedulePage'
 import { ROLE_HOME } from '@/types/user'
 
 function HomeRedirect() {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, authReady } = useAuth()
+  if (!authReady) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />
   return <Navigate to={ROLE_HOME[user.role]} replace />
 }
@@ -47,14 +55,16 @@ export function AppRouter() {
 
       <Route element={<ProtectedLayout />}>
         <Route path="student" element={<RequireRole role="student" />}>
-          <Route index element={<StudentDashboardPage />} />
+          <Route index element={<Navigate to="profile" replace />} />
+          <Route path="profile" element={<StudentDashboardPage />} />
           <Route path="attendance" element={<MyAttendancePage />} />
           <Route path="payments" element={<MyPaymentsPage />} />
           <Route path="materials" element={<MaterialsPage />} />
         </Route>
 
         <Route path="teacher" element={<RequireRole role="teacher" />}>
-          <Route index element={<TeacherDashboardPage />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<TeacherDashboardPage />} />
           <Route path="students" element={<Navigate to="/teacher/groups" replace />} />
           <Route path="groups" element={<MyGroupsPage />} />
           <Route path="groups/:groupId" element={<TeacherGroupDetailPage />} />
@@ -65,7 +75,8 @@ export function AppRouter() {
         </Route>
 
         <Route path="admin" element={<RequireRole role="admin" />}>
-          <Route index element={<AdminDashboardPage />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="students" element={<StudentsListPage />} />
           <Route path="students/new" element={<NewStudentPage />} />
           <Route path="students/:studentId" element={<StudentDetailPage />} />

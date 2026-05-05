@@ -25,6 +25,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { DataTable, type DataTableColumn } from '@/components/common/DataTable'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { useAdminData } from '@/contexts/AdminDataContext'
+import { hashPassword } from '@/lib/authCredentials'
 import type { AdminAppUser, AppUserRole } from '@/types/admin'
 
 function randomTempPassword() {
@@ -69,12 +70,18 @@ export function SettingsUsersPage() {
     },
   ]
 
-  const submit = () => {
+  const submit = async () => {
     if (!email.trim()) {
       enqueueSnackbar('E-poçt daxil edin', { variant: 'warning' })
       return
     }
-    appUserAdd({ id: crypto.randomUUID(), role, email: email.trim(), active })
+    const pw = tempPw.trim()
+    if (!pw) {
+      enqueueSnackbar('Şifrə daxil edin', { variant: 'warning' })
+      return
+    }
+    const passwordHash = await hashPassword(pw)
+    appUserAdd({ id: crypto.randomUUID(), role, email: email.trim(), active, passwordHash })
     enqueueSnackbar(`İstifadəçi yaradıldı. Müvəqqəti şifrə: ${tempPw}`, { variant: 'success', autoHideDuration: 12_000 })
     setOpen(false)
     setEmail('')
@@ -116,7 +123,7 @@ export function SettingsUsersPage() {
               value={tempPw}
               onChange={(e) => setTempPw(e.target.value)}
               fullWidth
-              helperText="Bu nümunə rejimində yalnız bildirişdə göstərilir; saxlanılmır."
+              helperText="Şifrə xəşlənərək admin məlumat bazasında saxlanılır (nümunə rejimi)."
             />
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <Button size="small" variant="outlined" onClick={() => setTempPw(randomTempPassword())} sx={{ textTransform: 'none' }}>
@@ -140,7 +147,7 @@ export function SettingsUsersPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Ləğv</Button>
-          <Button variant="contained" onClick={submit} sx={{ textTransform: 'none', fontWeight: 800 }}>
+          <Button variant="contained" onClick={() => void submit()} sx={{ textTransform: 'none', fontWeight: 800 }}>
             Yarat
           </Button>
         </DialogActions>

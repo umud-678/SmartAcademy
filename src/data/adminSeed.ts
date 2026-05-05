@@ -1,3 +1,4 @@
+import { AUTH_DEMO_PASSWORD_HASH_HEX } from '@/lib/authCredentials'
 import type { AdminCourse, AdminGroup, AdminState, AdminStudent, AdminTeacher } from '@/types/admin'
 import { buildEqualInstallments, finalCourseAmount } from '@/utils/installments'
 
@@ -295,9 +296,12 @@ export function seedAdminState(): AdminState {
   ]
 
   const appUsers: AdminState['appUsers'] = [
-    { id: 'u1', role: 'admin', email: 'admin@smartacademy.edu', active: true },
-    { id: 'u2', role: 'teacher', email: 'ali.mammadov@smartacademy.edu', active: true },
-    { id: 'u3', role: 'teacher', email: 'leyla.ibrahimova@smartacademy.edu', active: true },
+    { id: 'u1', role: 'admin', email: 'admin@smartacademy.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
+    { id: 'u2', role: 'teacher', email: 'ali.mammadov@smartacademy.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
+    { id: 'u3', role: 'teacher', email: 'leyla.ibrahimova@smartacademy.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
+    { id: 'u4', role: 'student', email: 'telebe@demo.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
+    /** Tələbə kartı ilə eyni e-poçt — telefonla giriş nümunəsi (+994501112233, şifrə demo). */
+    { id: 'u5', role: 'student', email: 'nargiz@mail.test', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
   ]
 
   const notifications: AdminState['notifications'] = [

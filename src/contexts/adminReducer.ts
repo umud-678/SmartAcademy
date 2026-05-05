@@ -1,5 +1,6 @@
 import { clampGroupMaxStudents, resolveGroupMaxStudents } from '@/constants/groupCapacity'
 import { seedAdminState } from '@/data/adminSeed'
+import { AUTH_DEMO_PASSWORD_HASH_HEX } from '@/lib/authCredentials'
 import type {
   AdminAppUser,
   AdminCourse,
@@ -25,10 +26,21 @@ import {
 } from '@/utils/installments'
 
 export const ADMIN_STORAGE_KEY = 'sa_admin_store_v2'
-export const ADMIN_STORAGE_VERSION = 4
+export const ADMIN_STORAGE_VERSION = 5
 
 const MAX_AUDIT = 250
 const MAX_NOTIF = 120
+
+function normalizeAppUsersLoaded(users: AdminAppUser[]): AdminAppUser[] {
+  return users.map((u) => ({
+    id: u.id,
+    role: u.role,
+    email: typeof u.email === 'string' ? u.email : '',
+    active: u.active ?? true,
+    passwordHash:
+      typeof u.passwordHash === 'string' && u.passwordHash.length > 0 ? u.passwordHash : AUTH_DEMO_PASSWORD_HASH_HEX,
+  }))
+}
 
 export type AdminAction =
   | { type: 'RESET' }
@@ -464,6 +476,29 @@ function mergeCoursesCatalog(loaded: AdminState): AdminState {
   return { ...loaded, courses }
 }
 
+/**
+ * Köhnə localStorage-da səhv şifrə xəşi və ya silinmiş nümunə hesabları olanda girişi bərpa edir.
+ * Yalnız seed `id` (u1, u2, …) üçün e-poçt/rol/aktivlik/xəş seed ilə sinxronlanır; digər istifadəçilər toxunulmaz qalır.
+ */
+function mergeSeedAppUsers(loaded: AdminState): AdminState {
+  const seedUsers = seedAdminState().appUsers
+  const seedIds = new Set(seedUsers.map((u) => u.id))
+  const loadedById = new Map(loaded.appUsers.map((u) => [u.id, u]))
+  const merged: AdminAppUser[] = []
+  for (const su of seedUsers) {
+    const ex = loadedById.get(su.id)
+    merged.push(
+      ex
+        ? { ...ex, email: su.email, role: su.role, active: su.active, passwordHash: su.passwordHash }
+        : { ...su },
+    )
+  }
+  for (const u of loaded.appUsers) {
+    if (!seedIds.has(u.id)) merged.push(u)
+  }
+  return { ...loaded, appUsers: merged }
+}
+
 export function initAdminStateFromStorage(): AdminState {
   try {
     const raw = localStorage.getItem(ADMIN_STORAGE_KEY)
@@ -471,7 +506,7 @@ export function initAdminStateFromStorage(): AdminState {
     const parsed = JSON.parse(raw) as { version?: number; data?: Partial<AdminState> }
     if (!parsed.data) return seedAdminState()
     const ver = parsed.version
-    if (ver !== 2 && ver !== 3 && ver !== 4) return seedAdminState()
+    if (ver == null || ver < 2 || ver > ADMIN_STORAGE_VERSION) return seedAdminState()
     const d = parsed.data
     if (
       !Array.isArray(d.courses) ||
@@ -484,15 +519,18 @@ export function initAdminStateFromStorage(): AdminState {
       return seedAdminState()
     }
     const paymentAuditLog = Array.isArray(d.paymentAuditLog) ? (d.paymentAuditLog as PaymentAuditEntry[]) : []
+    const partial = d as AdminState
     const loaded: AdminState = {
-      ...(d as AdminState),
+      ...partial,
       students: d.students!.map((s) => normalizeStudentLoaded(s as AdminStudent)),
+      appUsers: normalizeAppUsersLoaded((d.appUsers ?? []) as AdminAppUser[]),
       paymentAuditLog,
     }
     const withCourses = mergeCoursesCatalog(loaded)
+    const withAppUsers = mergeSeedAppUsers(withCourses)
     return {
-      ...withCourses,
-      groups: withCourses.groups.map((g) => ({
+      ...withAppUsers,
+      groups: withAppUsers.groups.map((g) => ({
         ...g,
         maxStudents: resolveGroupMaxStudents(g.studentIds.length, g.maxStudents),
       })),

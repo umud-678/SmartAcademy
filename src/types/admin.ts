@@ -137,6 +137,8 @@ export type AdminAppUser = {
   role: AppUserRole
   email: string
   active: boolean
+  /** SHA-256 (hex) — AUTH_PASSWORD_PEPPER ilə; boşdursa giriş mümkün deyil */
+  passwordHash: string
 }
 
 export type AdminNotification = {

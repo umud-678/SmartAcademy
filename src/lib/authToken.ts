@@ -6,8 +6,9 @@ function getSigningSecret(): string {
 
 const text = new TextEncoder()
 
-function toB64url(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf)
+function toB64url(data: BufferSource): string {
+  const bytes =
+    data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
   let bin = ''
   for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]!)
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -59,7 +60,8 @@ export async function verifyAuthToken(token: string): Promise<AuthUser | null> {
   const secret = getSigningSecret()
   try {
     const key = await importHmacKey(secret)
-    const ok = await crypto.subtle.verify('HMAC', key, fromB64url(sigB64), text.encode(payloadB64))
+    const sigBytes = fromB64url(sigB64)
+    const ok = await crypto.subtle.verify('HMAC', key, sigBytes as BufferSource, text.encode(payloadB64))
     if (!ok) return null
     const json = new TextDecoder().decode(fromB64url(payloadB64))
     const payload = JSON.parse(json) as TokenPayload

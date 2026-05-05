@@ -1,7 +1,7 @@
 /** Şifrə xəşi üçün sabit duz (serverdə env ilə əvəz olunmalıdır). */
 export const AUTH_PASSWORD_PEPPER = 'sa-auth-pepper-v1'
 
-/** `demo` şifrəsi + AUTH_PASSWORD_Pepper üçün SHA-256 (hex). Seed və köhnə localStorage miqrasiyası. */
+/** `demo` şifrəsi + AUTH_PASSWORD_PEPPER üçün SHA-256 (hex). Seed və köhnə localStorage miqrasiyası. */
 export const AUTH_DEMO_PASSWORD_HASH_HEX =
   'b43a9cac8d4a4aa5ddf7d5332fbc9a58166e53d66fbef32b6942122ba03ed93b'
 

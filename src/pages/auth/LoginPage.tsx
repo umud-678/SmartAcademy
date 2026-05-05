@@ -7,14 +7,13 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import {
   Box,
   Button,
+  Checkbox,
+  CircularProgress,
   Divider,
-  FormControl,
+  FormControlLabel,
   IconButton,
   InputAdornment,
-  InputLabel,
   Link,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -24,8 +23,15 @@ import { enqueueSnackbar } from 'notistack'
 import { useMemo, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { LoginIllustration } from '@/pages/auth/LoginIllustration'
+import { useAdminData } from '@/contexts/AdminDataContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { ROLE_HOME, type UserRole } from '@/types/user'
+import { authenticateAppUser, type LoginFailureCode } from '@/lib/authService'
+import { ROLE_HOME } from '@/types/user'
+
+/** `true`: e-poçt tapılmadı və şifrə səhvi üçün eyni mesaj (enumeration əleyhinə). */
+const LOGIN_OPAQUE_CREDENTIAL_ERRORS = true
+
+const STORAGE_LOGIN_FAILS = 'sa_login_fail_count'
 
 const INPUT_RADIUS = 10
 const PILL_RADIUS = 999
@@ -46,10 +52,37 @@ const ui = {
   terms: 'İstifadə şərtləri',
   privacy: 'Məxfilik',
   cookies: 'Cookie siyasəti',
-  demoRole: 'Nümunə rol (serverə qoşulana qədər)',
   register: 'Qeydiyyat',
   topSignIn: 'Daxil ol',
 } as const
+
+const LOGIN_ERRORS: Record<LoginFailureCode, string> = {
+  not_found: 'Bu e-poçt üzrə istifadəçi tapılmadı.',
+  wrong_password: 'Şifrə yanlışdır.',
+  inactive: 'Hesab deaktivdir. İdarəçi ilə əlaqə saxlayın.',
+  not_configured: 'Hesab üçün şifrə təyin edilməyib. İdarəçi ilə əlaqə saxlayın.',
+}
+
+function loginFailureMessage(code: LoginFailureCode): string {
+  if (LOGIN_OPAQUE_CREDENTIAL_ERRORS && (code === 'not_found' || code === 'wrong_password')) {
+    return 'E-poçt və ya şifrə yanlışdır.'
+  }
+  return LOGIN_ERRORS[code]
+}
+
+function readLoginFailCount(): number {
+  try {
+    const n = parseInt(sessionStorage.getItem(STORAGE_LOGIN_FAILS) || '0', 10)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+function setLoginFailCount(n: number) {
+  if (n <= 0) sessionStorage.removeItem(STORAGE_LOGIN_FAILS)
+  else sessionStorage.setItem(STORAGE_LOGIN_FAILS, String(n))
+}
 
 export function LoginPage() {
   const theme = useTheme()
@@ -67,7 +100,8 @@ export function LoginPage() {
   const socialBorder = isDark ? alpha(theme.palette.common.white, 0.12) : '#E5E7EB'
   const socialHoverBg = isDark ? alpha(theme.palette.common.white, 0.1) : '#F9FAFB'
 
-  const { isAuthenticated, login, user } = useAuth()
+  const { isAuthenticated, user, authReady, applySession } = useAuth()
+  const { state } = useAdminData()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from
@@ -75,7 +109,8 @@ export function LoginPage() {
   const [email, setEmail] = useState('telebe@demo.edu')
   const [password, setPassword] = useState('demo')
   const [showPassword, setShowPassword] = useState(false)
-  const [role, setRole] = useState<UserRole>('student')
+  const [busy, setBusy] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
 
   const fieldSx = useMemo(
     () => ({
@@ -91,14 +126,45 @@ export function LoginPage() {
     [inputBg, inputBorder, inputBorderHover, primary, textMuted],
   )
 
+  if (!authReady) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: pageBg }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
   if (isAuthenticated && user) {
     return <Navigate to={from && from !== '/login' ? from : ROLE_HOME[user.role]} replace />
   }
 
-  const submit = () => {
-    login({ email, password, role })
-    navigate(ROLE_HOME[role], { replace: true })
-    enqueueSnackbar('Giriş uğurlu', { variant: 'success' })
+  const submit = async () => {
+    if (!email.trim() || !password) {
+      enqueueSnackbar('E-poçt və şifrə daxil edin', { variant: 'warning' })
+      return
+    }
+    setBusy(true)
+    try {
+      const fails = readLoginFailCount()
+      if (fails >= 3) {
+        const delayMs = fails >= 5 ? 5000 : 2000
+        await new Promise((r) => setTimeout(r, delayMs))
+      }
+      const r = await authenticateAppUser(email, password, state.appUsers, state.teachers, state.students)
+      if (!r.ok) {
+        if (r.code === 'not_found' || r.code === 'wrong_password') {
+          setLoginFailCount(fails + 1)
+        }
+        enqueueSnackbar(loginFailureMessage(r.code), { variant: r.code === 'inactive' ? 'warning' : 'error' })
+        return
+      }
+      setLoginFailCount(0)
+      applySession({ token: r.token, user: r.user, remember: rememberMe })
+      enqueueSnackbar('Giriş uğurlu', { variant: 'success' })
+      navigate(from && from !== '/login' ? from : ROLE_HOME[r.user.role], { replace: true })
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -217,6 +283,7 @@ export function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
+            disabled={busy}
             sx={fieldSx}
           />
           <TextField
@@ -226,6 +293,7 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
+            disabled={busy}
             sx={fieldSx}
             InputProps={{
               endAdornment: (
@@ -256,12 +324,29 @@ export function LoginPage() {
             </Link>
           </Box>
 
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
+            Giriş üçün <b>panel istifadəçisi</b> lazımdır (Admin → Tənzimləmələr — istifadəçilər). Yalnız tələbə kartındakı e-poçt kifayət etmir,
+            həmin ünvan ayrıca istifadəçi kimi əlavə olunmalıdır. E-poçt və ya bazada olan tələbə telefonu daxil edə bilərsiniz. Nümunə:{' '}
+            <b>admin@smartacademy.edu</b>, <b>telebe@demo.edu</b> və ya telefon <b>+994501112233</b> (şifrə: <b>demo</b>).
+          </Typography>
+
+          <FormControlLabel
+            control={<Checkbox checked={rememberMe} onChange={(_, c) => setRememberMe(c)} size="small" disabled={busy} />}
+            label={
+              <Typography variant="body2">
+                Məni xatırla — söndürülsə, giriş yalnız bu brauzer sessiyası üçün saxlanılır (cihazı bağlayanda çıxış).
+              </Typography>
+            }
+            sx={{ alignSelf: 'flex-start', mt: -0.5 }}
+          />
+
           <Button
             fullWidth
             size="large"
             variant="contained"
             disableElevation
-            onClick={submit}
+            disabled={busy}
+            onClick={() => void submit()}
             sx={{
               py: 1.75,
               borderRadius: PILL_RADIUS,
@@ -276,22 +361,15 @@ export function LoginPage() {
               },
             }}
           >
-            {ui.signInCta}
+            {busy ? (
+              <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                <CircularProgress size={22} color="inherit" />
+                <span>Giriş…</span>
+              </Stack>
+            ) : (
+              ui.signInCta
+            )}
           </Button>
-
-          <FormControl fullWidth size="small" sx={{ ...fieldSx, mt: -0.5 }}>
-            <InputLabel id="login-role-label">{ui.demoRole}</InputLabel>
-            <Select labelId="login-role-label" label={ui.demoRole} value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-              <MenuItem value="student">Tələbə</MenuItem>
-              <MenuItem value="teacher">Müəllim</MenuItem>
-              <MenuItem value="admin">İdarəçi</MenuItem>
-            </Select>
-          </FormControl>
-          {role === 'teacher' ? (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
-              Müəllim panelində qruplar üçün e-poçt sistemdəki müəllimlə eyni olsun (məsələn, <b>ali.mammadov@smartacademy.edu</b>).
-            </Typography>
-          ) : null}
 
           <Stack direction="row" alignItems="center" spacing={2} sx={{ color: textMuted }}>
             <Divider sx={{ flex: 1, borderColor: 'divider' }} />

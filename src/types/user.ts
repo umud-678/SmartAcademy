@@ -7,8 +7,9 @@ export type AuthUser = {
   role: UserRole
 }
 
+/** Uğurlu girişdən sonra birbaşa açılan əsas səhifə (rol + UX). */
 export const ROLE_HOME: Record<UserRole, string> = {
-  student: '/student',
-  teacher: '/teacher',
-  admin: '/admin',
+  student: '/student/profile',
+  teacher: '/teacher/dashboard',
+  admin: '/admin/dashboard',
 }

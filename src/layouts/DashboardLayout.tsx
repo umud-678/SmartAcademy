@@ -34,6 +34,7 @@ import { NAV_BY_ROLE, ROLE_ICON, ROLE_LABEL } from '@/app/navConfig'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAdminData } from '@/contexts/AdminDataContext'
 import { useAdminShell } from '@/contexts/AdminShellContext'
+import { adminSearchPick } from '@/lib/adminGlobalSearch'
 import { teacherMenuAlertLines } from '@/lib/teacherPanelUtils'
 import { useThemeMode } from '@/theme/ThemeModeContext'
 
@@ -63,6 +64,20 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     () => (isTeacher ? teacherMenuAlertLines(adminData.state, user?.email) : []),
     [isTeacher, adminData.state, user?.email],
   )
+
+  const runAdminGlobalSearch = () => {
+    const q = shell.globalSearch.trim()
+    const pick = adminSearchPick(adminData.state, q)
+    if (!pick) {
+      enqueueSnackbar('Nəticə tapılmadı (ən azı 2 simvol; tələbə, qrup, müəllim və ya ödəniş açar sözü).', { variant: 'info' })
+      return
+    }
+    shell.setGlobalSearch('')
+    if (pick.kind === 'student') navigate(`/admin/students/${pick.id}`)
+    else if (pick.kind === 'group') navigate(`/admin/groups/${pick.id}`)
+    else if (pick.kind === 'teacher') navigate(`/admin/teachers/${pick.id}`)
+    else navigate('/admin/payments/dashboard')
+  }
 
   const navButton = (item: (typeof navItems)[0], idx: number, compact: boolean) => {
     const btn = (
@@ -202,6 +217,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               placeholder="Tələbə, qrup, müəllim axtar…"
               value={shell.globalSearch}
               onChange={(e) => shell.setGlobalSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  runAdminGlobalSearch()
+                }
+              }}
               sx={{
                 flex: 1,
                 minWidth: 200,
