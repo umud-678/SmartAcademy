@@ -83,7 +83,6 @@ export function TeacherProfilePage() {
 
 function TeacherProfileInner({ email }: { email: string }) {
   const { state } = useAdminData()
-  const [pwd, setPwd] = useState('')
   const [prefs, setPrefs] = useState<Prefs>(() => loadPrefs(email))
   const [board, setBoard] = useState<StudentBoard>(() => loadBoard(email))
   const [search, setSearch] = useState('')
@@ -93,7 +92,6 @@ function TeacherProfileInner({ email }: { email: string }) {
   const teacherId = useMemo(() => resolveTeacherIdByEmail(state, email), [state, email])
 
   const teacher = useMemo(() => (teacherId ? state.teachers.find((t) => t.id === teacherId) : undefined), [state.teachers, teacherId])
-
   const groups = useMemo(() => (teacherId ? teacherActiveGroups(state, teacherId) : []), [state, teacherId])
 
   const assignedRows = useMemo(() => (teacherId ? teacherAssignedStudentRows(state, teacherId) : []), [state, teacherId])
@@ -287,26 +285,13 @@ function TeacherProfileInner({ email }: { email: string }) {
       <Card variant="outlined" sx={{ borderRadius: 3 }}>
         <CardContent>
           <Typography fontWeight={900} gutterBottom>
-            Şifrə (nümunə)
+            Təhlükəsizlik
           </Typography>
-          <TextField
-            type="password"
-            label="Yeni şifrə"
-            value={pwd}
-            onChange={(e) => setPwd(e.target.value)}
-            fullWidth
-            size="small"
-            sx={{ maxWidth: 400, mb: 1 }}
-          />
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setPwd('')
-              enqueueSnackbar('Nümunə: şifrə server olmadan saxlanılmır.', { variant: 'info' })
-            }}
-            sx={{ textTransform: 'none' }}
-          >
-            Saxla
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Parol dəyişmək üçün ayrıca Ayarlar səhifəsinə keçin.
+          </Typography>
+          <Button component={RouterLink} to="/teacher/settings" variant="outlined" sx={{ textTransform: 'none' }}>
+            Ayarlara keç
           </Button>
         </CardContent>
       </Card>

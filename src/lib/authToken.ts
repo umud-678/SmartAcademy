@@ -32,6 +32,7 @@ type TokenPayload = {
   email: string
   role: UserRole
   fullName: string
+  mustChangePassword?: boolean
   exp: number
 }
 
@@ -43,6 +44,7 @@ export async function createAuthToken(user: AuthUser, ttlMs = 7 * 24 * 60 * 60 *
     email: user.email,
     role: user.role,
     fullName: user.fullName,
+    mustChangePassword: Boolean(user.mustChangePassword),
     exp: Date.now() + ttlMs,
   }
   const payloadStr = JSON.stringify(payload)
@@ -72,6 +74,7 @@ export async function verifyAuthToken(token: string): Promise<AuthUser | null> {
       email: payload.email,
       role: payload.role,
       fullName: payload.fullName || payload.email.split('@')[0] || 'İstifadəçi',
+      mustChangePassword: Boolean(payload.mustChangePassword),
     }
   } catch {
     return null

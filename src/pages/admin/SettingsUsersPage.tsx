@@ -25,7 +25,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { DataTable, type DataTableColumn } from '@/components/common/DataTable'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { useAdminData } from '@/contexts/AdminDataContext'
-import { hashPassword } from '@/lib/authCredentials'
+import { hashPassword, validatePasswordPolicy } from '@/lib/authCredentials'
 import type { AdminAppUser, AppUserRole } from '@/types/admin'
 
 function randomTempPassword() {
@@ -40,6 +40,9 @@ export function SettingsUsersPage() {
   const [email, setEmail] = useState('')
   const [active, setActive] = useState(true)
   const [tempPw, setTempPw] = useState(() => randomTempPassword())
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetUser, setResetUser] = useState<AdminAppUser | null>(null)
+  const [resetPw, setResetPw] = useState(() => randomTempPassword())
 
   const columns: DataTableColumn<AdminAppUser>[] = [
     { id: 'email', label: 'E-poçt', render: (u) => <Typography fontWeight={700}>{u.email}</Typography> },
@@ -54,11 +57,33 @@ export function SettingsUsersPage() {
       render: (u) => <StatusBadge label={u.active ? 'Aktiv' : 'Deaktiv'} tone={u.active ? 'success' : 'warning'} />,
     },
     {
+      id: 'pwd',
+      label: 'Parol',
+      render: (u) => (
+        <StatusBadge
+          label={u.passwordTemporary ? 'Müvəqqəti' : 'Dəyişdirilib'}
+          tone={u.passwordTemporary ? 'warning' : 'success'}
+        />
+      ),
+    },
+    {
       id: 'act',
       label: '',
       align: 'right',
       render: (u) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              setResetUser(u)
+              setResetPw(randomTempPassword())
+              setResetOpen(true)
+            }}
+            sx={{ textTransform: 'none' }}
+          >
+            Parolu sıfırla
+          </Button>
           <Button size="small" variant="outlined" onClick={() => appUserUpdate(u.id, { active: !u.active })} sx={{ textTransform: 'none' }}>
             {u.active ? 'Deaktiv et' : 'Aktiv et'}
           </Button>
@@ -81,11 +106,44 @@ export function SettingsUsersPage() {
       return
     }
     const passwordHash = await hashPassword(pw)
-    appUserAdd({ id: crypto.randomUUID(), role, email: email.trim(), active, passwordHash })
+    appUserAdd({
+      id: crypto.randomUUID(),
+      role,
+      email: email.trim(),
+      active,
+      passwordHash,
+      passwordTemporary: role !== 'admin',
+    })
     enqueueSnackbar(`İstifadəçi yaradıldı. Müvəqqəti şifrə: ${tempPw}`, { variant: 'success', autoHideDuration: 12_000 })
     setOpen(false)
     setEmail('')
     setTempPw(randomTempPassword())
+  }
+
+  const submitPasswordReset = async () => {
+    if (!resetUser) return
+    const pw = resetPw.trim()
+    if (!pw) {
+      enqueueSnackbar('Yeni parol daxil edin', { variant: 'warning' })
+      return
+    }
+    const policyError = validatePasswordPolicy(pw)
+    if (policyError) {
+      enqueueSnackbar(policyError, { variant: 'warning' })
+      return
+    }
+    const passwordHash = await hashPassword(pw)
+    appUserUpdate(resetUser.id, {
+      passwordHash,
+      passwordTemporary: resetUser.role !== 'admin',
+    })
+    enqueueSnackbar(`Parol yeniləndi: ${resetUser.email}. Yeni parol: ${pw}`, {
+      variant: 'success',
+      autoHideDuration: 12_000,
+    })
+    setResetOpen(false)
+    setResetUser(null)
+    setResetPw(randomTempPassword())
   }
 
   return (
@@ -149,6 +207,65 @@ export function SettingsUsersPage() {
           <Button onClick={() => setOpen(false)}>Ləğv</Button>
           <Button variant="contained" onClick={() => void submit()} sx={{ textTransform: 'none', fontWeight: 800 }}>
             Yarat
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={resetOpen}
+        onClose={() => {
+          setResetOpen(false)
+          setResetUser(null)
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Parolu sıfırla</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              İstifadəçi: <b>{resetUser?.email ?? '—'}</b>
+            </Typography>
+            <TextField
+              label="Yeni parol"
+              value={resetPw}
+              onChange={(e) => setResetPw(e.target.value)}
+              fullWidth
+              helperText="Minimum 8 simvol, ən azı 1 böyük hərf və 1 xüsusi işarə."
+            />
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button size="small" variant="outlined" onClick={() => setResetPw(randomTempPassword())} sx={{ textTransform: 'none' }}>
+                Təsadüfi parol
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<ContentCopyOutlinedIcon />}
+                onClick={() => {
+                  void navigator.clipboard.writeText(resetPw)
+                  enqueueSnackbar('Kopyalandı', { variant: 'info' })
+                }}
+                sx={{ textTransform: 'none' }}
+              >
+                Kopyala
+              </Button>
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              Müəllim/Tələbə üçün bu parol müvəqqəti sayılır və ilk girişdən sonra Ayarlar bölməsində dəyişdirilməlidir.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setResetOpen(false)
+              setResetUser(null)
+            }}
+          >
+            Ləğv
+          </Button>
+          <Button variant="contained" onClick={() => void submitPasswordReset()} sx={{ textTransform: 'none', fontWeight: 800 }}>
+            Yenilə
           </Button>
         </DialogActions>
       </Dialog>

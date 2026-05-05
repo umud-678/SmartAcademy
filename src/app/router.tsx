@@ -25,6 +25,8 @@ import { MaterialsPage } from '@/pages/student/MaterialsPage'
 import { MyAttendancePage } from '@/pages/student/MyAttendancePage'
 import { MyPaymentsPage } from '@/pages/student/MyPaymentsPage'
 import { StudentDashboardPage } from '@/pages/student/StudentDashboardPage'
+import { StudentProfilePage } from '@/pages/student/StudentProfilePage'
+import { StudentSettingsPage } from '@/pages/student/StudentSettingsPage'
 import { GroupDetailPage as TeacherGroupDetailPage } from '@/pages/teacher/GroupDetailPage'
 import { MyGroupsPage } from '@/pages/teacher/MyGroupsPage'
 import { TeacherDashboardPage } from '@/pages/teacher/TeacherDashboardPage'
@@ -32,6 +34,7 @@ import { TeacherAttendancePage } from '@/pages/teacher/TeacherAttendancePage'
 import { TeacherGradesOverviewPage } from '@/pages/teacher/TeacherGradesOverviewPage'
 import { TeacherProfilePage } from '@/pages/teacher/TeacherProfilePage'
 import { TeacherSchedulePage } from '@/pages/teacher/TeacherSchedulePage'
+import { TeacherSettingsPage } from '@/pages/teacher/TeacherSettingsPage'
 import { ROLE_HOME } from '@/types/user'
 
 function HomeRedirect() {
@@ -55,11 +58,13 @@ export function AppRouter() {
 
       <Route element={<ProtectedLayout />}>
         <Route path="student" element={<RequireRole role="student" />}>
-          <Route index element={<Navigate to="profile" replace />} />
-          <Route path="profile" element={<StudentDashboardPage />} />
+          <Route index element={<Navigate to="home" replace />} />
+          <Route path="home" element={<StudentDashboardPage />} />
+          <Route path="profile" element={<StudentProfilePage />} />
           <Route path="attendance" element={<MyAttendancePage />} />
           <Route path="payments" element={<MyPaymentsPage />} />
           <Route path="materials" element={<MaterialsPage />} />
+          <Route path="settings" element={<StudentSettingsPage />} />
         </Route>
 
         <Route path="teacher" element={<RequireRole role="teacher" />}>
@@ -72,6 +77,7 @@ export function AppRouter() {
           <Route path="attendance" element={<TeacherAttendancePage />} />
           <Route path="grades" element={<TeacherGradesOverviewPage />} />
           <Route path="profile" element={<TeacherProfilePage />} />
+          <Route path="settings" element={<TeacherSettingsPage />} />
         </Route>
 
         <Route path="admin" element={<RequireRole role="admin" />}>

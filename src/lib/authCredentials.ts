@@ -25,3 +25,11 @@ export async function verifyPassword(plain: string, hashHex: string): Promise<bo
   for (let i = 0; i < h.length; i++) diff |= h.charCodeAt(i) ^ hashHex.charCodeAt(i)
   return diff === 0
 }
+
+export function validatePasswordPolicy(password: string): string | null {
+  const p = password.trim()
+  if (p.length < 8) return 'Şifrə minimum 8 simvol olmalıdır.'
+  if (!/[A-Z]/.test(p)) return 'Şifrədə ən azı 1 böyük hərf olmalıdır.'
+  if (!/[!@#$%^&*()_\-+=[\]{};:'"\\|,.<>/?`~]/.test(p)) return 'Şifrədə ən azı 1 xüsusi işarə olmalıdır.'
+  return null
+}

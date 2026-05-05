@@ -39,6 +39,7 @@ function normalizeAppUsersLoaded(users: AdminAppUser[]): AdminAppUser[] {
     active: u.active ?? true,
     passwordHash:
       typeof u.passwordHash === 'string' && u.passwordHash.length > 0 ? u.passwordHash : AUTH_DEMO_PASSWORD_HASH_HEX,
+    passwordTemporary: u.passwordTemporary ?? u.role !== 'admin',
   }))
 }
 
@@ -476,6 +477,56 @@ function mergeCoursesCatalog(loaded: AdminState): AdminState {
   return { ...loaded, courses }
 }
 
+/** Saxlanmış müəllim siyahısına seed-də olan, lakin bazada olmayan müəllimləri əlavə edir. */
+function mergeTeachersCatalog(loaded: AdminState): AdminState {
+  const seed = seedAdminState()
+  const byId = new Map(loaded.teachers.map((t) => [t.id, t]))
+  const teachers: AdminTeacher[] = seed.teachers.map((st) => {
+    const ex = byId.get(st.id)
+    return ex ?? { ...st }
+  })
+  for (const t of loaded.teachers) {
+    if (!seed.teachers.some((st) => st.id === t.id)) teachers.push({ ...t })
+  }
+  return { ...loaded, teachers }
+}
+
+/**
+ * Demo miqrasiyası:
+ * Həmidə Bədəlli müəlliminin WS/Web Dizayner qrupunda tələbə yoxdursa,
+ * seed-dəki 32 Web Dizayner tələbəsini həmin qrupa əlavə edir.
+ */
+function ensureHemideWsGroupHasStudents(loaded: AdminState): AdminState {
+  const hemide = loaded.teachers.find((t) => t.email.trim().toLowerCase() === 'hemide.bedelli@smartacademy.edu')
+  if (!hemide) return loaded
+
+  const wsGroup = loaded.groups.find(
+    (g) =>
+      g.teacherId === hemide.id &&
+      (g.name.trim().toLowerCase() === 'ws' || g.name.trim().toLowerCase().includes('web dizayner')),
+  )
+  if (!wsGroup) return loaded
+
+  const seed = seedAdminState()
+  const demoWebStudents = seed.students.filter((s) => s.email.trim().toLowerCase().startsWith('webdesigner'))
+  if (demoWebStudents.length === 0) return loaded
+
+  const loadedStudentIds = new Set(loaded.students.map((s) => s.id))
+  const missing = demoWebStudents.filter((s) => !loadedStudentIds.has(s.id))
+  const mergedStudents = [...loaded.students, ...missing]
+
+  const fillIds = demoWebStudents.map((s) => s.id)
+  const nextIds = Array.from(new Set([...wsGroup.studentIds, ...fillIds])).slice(0, 32)
+  const nextIdSet = new Set(nextIds)
+
+  const students = mergedStudents.map((s) => (nextIdSet.has(s.id) ? { ...s, groupId: wsGroup.id } : s))
+  const groups = loaded.groups.map((g) =>
+    g.id === wsGroup.id ? { ...g, maxStudents: Math.max(g.maxStudents ?? 0, 32), studentIds: nextIds } : g,
+  )
+
+  return { ...loaded, students, groups }
+}
+
 /**
  * Köhnə localStorage-da səhv şifrə xəşi və ya silinmiş nümunə hesabları olanda girişi bərpa edir.
  * Yalnız seed `id` (u1, u2, …) üçün e-poçt/rol/aktivlik/xəş seed ilə sinxronlanır; digər istifadəçilər toxunulmaz qalır.
@@ -489,7 +540,14 @@ function mergeSeedAppUsers(loaded: AdminState): AdminState {
     const ex = loadedById.get(su.id)
     merged.push(
       ex
-        ? { ...ex, email: su.email, role: su.role, active: su.active, passwordHash: su.passwordHash }
+        ? {
+            ...ex,
+            email: su.email,
+            role: su.role,
+            active: su.active,
+            passwordHash: su.passwordHash,
+            passwordTemporary: su.passwordTemporary,
+          }
         : { ...su },
     )
   }
@@ -527,10 +585,12 @@ export function initAdminStateFromStorage(): AdminState {
       paymentAuditLog,
     }
     const withCourses = mergeCoursesCatalog(loaded)
-    const withAppUsers = mergeSeedAppUsers(withCourses)
+    const withTeachers = mergeTeachersCatalog(withCourses)
+    const withAppUsers = mergeSeedAppUsers(withTeachers)
+    const withHemideWsStudents = ensureHemideWsGroupHasStudents(withAppUsers)
     return {
-      ...withAppUsers,
-      groups: withAppUsers.groups.map((g) => ({
+      ...withHemideWsStudents,
+      groups: withHemideWsStudents.groups.map((g) => ({
         ...g,
         maxStudents: resolveGroupMaxStudents(g.studentIds.length, g.maxStudents),
       })),

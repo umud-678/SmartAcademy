@@ -160,6 +160,12 @@ export function LoginPage() {
       }
       setLoginFailCount(0)
       applySession({ token: r.token, user: r.user, remember: rememberMe })
+      if (r.mustChangePassword && (r.user.role === 'teacher' || r.user.role === 'student')) {
+        enqueueSnackbar('Bu parol müvəqqətidir. Profil/Ayarlar bölməsinə keçib yeni parol təyin edin.', {
+          variant: 'warning',
+          autoHideDuration: 7000,
+        })
+      }
       enqueueSnackbar('Giriş uğurlu', { variant: 'success' })
       navigate(from && from !== '/login' ? from : ROLE_HOME[r.user.role], { replace: true })
     } finally {

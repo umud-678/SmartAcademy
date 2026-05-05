@@ -139,6 +139,8 @@ export type AdminAppUser = {
   active: boolean
   /** SHA-256 (hex) — AUTH_PASSWORD_PEPPER ilə; boşdursa giriş mümkün deyil */
   passwordHash: string
+  /** true olduqda istifadəçi ilk girişdən sonra parolu dəyişməlidir */
+  passwordTemporary?: boolean
 }
 
 export type AdminNotification = {

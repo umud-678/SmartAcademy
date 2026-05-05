@@ -124,6 +124,66 @@ function seedExtraStudents(): AdminStudent[] {
   )
 }
 
+/** Nümunə: Web Dizayner qrupu üçün 32 tələbə */
+function seedWebDesignerStudents(): AdminStudent[] {
+  const names = [
+    'Umud Huseynov',
+    'Aylin Mammadli',
+    'Murad Aliyev',
+    'Sevinc Quliyeva',
+    'Ramil Hasanov',
+    'Nigar Karimova',
+    'Aydin Safarov',
+    'Leman Ismayilova',
+    'Orxan Mammadov',
+    'Gunel Rahimova',
+    'Kanan Abbasov',
+    'Samira Huseynli',
+    'Rashad Agayev',
+    'Ayan Sultanova',
+    'Tural Ahmadov',
+    'Madina Aliyeva',
+    'Elvin Rzayev',
+    'Sona Jabbarli',
+    'Elnur Ibrahimov',
+    'Nurlana Asgarova',
+    'Ferid Mammadli',
+    'Afaq Talibova',
+    'Nicat Hajiyev',
+    'Rena Gurbanli',
+    'Ilkin Karimli',
+    'Aysel Mammadova',
+    'Togrul Jalilov',
+    'Arzu Bayramova',
+    'Rauf Suleymanov',
+    'Vusala Nabiyeva',
+    'Emil Rustamov',
+    'Lala Kazimova',
+  ]
+  return names.map((name, idx) => {
+    const n = 100 + idx
+    const id = `s${n}`
+    const attendance = 74 + ((idx * 3) % 23)
+    return mkStudent({
+      id,
+      name,
+      email: `webdesigner${n}@mail.test`,
+      phone: `+994507${String(10000 + n).padStart(6, '0')}`,
+      parentPhone: `+994552${String(10000 + n).padStart(6, '0')}`,
+      groupId: 'g6',
+      status: 'active',
+      attendanceRate: attendance,
+      coursePriceAzn: 1700,
+      discountAzn: idx % 8 === 0 ? 120 : 0,
+      discountReason: idx % 8 === 0 ? 'Kampaniya' : '',
+      discountReasonCode: idx % 8 === 0 ? 'campaign' : 'manual',
+      installmentMonths: 4,
+      firstDue: '2026-06-10',
+      paidFirst: idx % 6 === 0,
+    })
+  })
+}
+
 export function seedAdminState(): AdminState {
   const courses: AdminCourse[] = [
     { id: 'c1', name: 'Full-Stack Web Development', duration: '6 ay', priceAzn: 5000, active: true, disabled: false },
@@ -171,6 +231,7 @@ export function seedAdminState(): AdminState {
     { id: 'c43', name: '3ds Max — interyer vizualizasiyası', duration: '3 ay', priceAzn: 1380, active: true, disabled: false },
     { id: 'c44', name: 'Ruby on Rails', duration: '3 ay', priceAzn: 1980, active: true, disabled: false },
     { id: 'c45', name: 'Kubernetes və konteynerlər', duration: '2 ay', priceAzn: 2150, active: true, disabled: false },
+    { id: 'c46', name: 'Web Dizayner', duration: '4 ay', priceAzn: 1700, active: true, disabled: false },
   ]
 
   const teachers: AdminTeacher[] = [
@@ -182,7 +243,10 @@ export function seedAdminState(): AdminState {
     mkTeacher('t6', 'S. Rəhimli', 'sebine.rahimli@smartacademy.edu', 19, 87),
     mkTeacher('t7', 'V. Tağızadə', 'vuqar.tagizade@smartacademy.edu', 26, 91),
     mkTeacher('t8', 'M. Cəfərova', 'maryam.jafarova@smartacademy.edu', 24, 89),
+    mkTeacher('t9', 'Həmidə Bədəlli', 'hemide.bedelli@smartacademy.edu', 18, 93),
   ]
+
+  const webDesignerStudents = seedWebDesignerStudents()
 
   const groups: AdminGroup[] = [
     {
@@ -237,6 +301,19 @@ export function seedAdminState(): AdminState {
       studentIds: ['s37', 's38'],
       status: 'active',
       schedule: [{ id: 'sl5', days: [1, 3], start: '18:30', end: '20:30', room: 'Online' }],
+    },
+    {
+      id: 'g6',
+      name: 'WD-2026-A',
+      courseId: 'c46',
+      teacherId: 't9',
+      maxStudents: 32,
+      studentIds: webDesignerStudents.map((s) => s.id),
+      status: 'active',
+      schedule: [
+        { id: 'sl6a', days: [2], start: '19:00', end: '21:00', room: '203' },
+        { id: 'sl6b', days: [6], start: '11:00', end: '13:00', room: 'Design Lab' },
+      ],
     },
   ]
 
@@ -293,15 +370,38 @@ export function seedAdminState(): AdminState {
       paidFirst: true,
     }),
     ...seedExtraStudents(),
+    ...webDesignerStudents,
   ]
 
   const appUsers: AdminState['appUsers'] = [
-    { id: 'u1', role: 'admin', email: 'admin@smartacademy.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
-    { id: 'u2', role: 'teacher', email: 'ali.mammadov@smartacademy.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
-    { id: 'u3', role: 'teacher', email: 'leyla.ibrahimova@smartacademy.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
-    { id: 'u4', role: 'student', email: 'telebe@demo.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
+    { id: 'u1', role: 'admin', email: 'admin@smartacademy.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX, passwordTemporary: false },
+    {
+      id: 'u2',
+      role: 'teacher',
+      email: 'ali.mammadov@smartacademy.edu',
+      active: true,
+      passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX,
+      passwordTemporary: true,
+    },
+    {
+      id: 'u3',
+      role: 'teacher',
+      email: 'leyla.ibrahimova@smartacademy.edu',
+      active: true,
+      passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX,
+      passwordTemporary: true,
+    },
+    {
+      id: 'u6',
+      role: 'teacher',
+      email: 'hemide.bedelli@smartacademy.edu',
+      active: true,
+      passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX,
+      passwordTemporary: true,
+    },
+    { id: 'u4', role: 'student', email: 'telebe@demo.edu', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX, passwordTemporary: true },
     /** Tələbə kartı ilə eyni e-poçt — telefonla giriş nümunəsi (+994501112233, şifrə demo). */
-    { id: 'u5', role: 'student', email: 'nargiz@mail.test', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX },
+    { id: 'u5', role: 'student', email: 'nargiz@mail.test', active: true, passwordHash: AUTH_DEMO_PASSWORD_HASH_HEX, passwordTemporary: true },
   ]
 
   const notifications: AdminState['notifications'] = [

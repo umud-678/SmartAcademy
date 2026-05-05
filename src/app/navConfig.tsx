@@ -23,10 +23,12 @@ export type NavItem = {
 
 export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   student: [
-    { label: 'Profil', path: '/student/profile', icon: <DashboardOutlinedIcon /> },
+    { label: 'Ana ekran', path: '/student/home', icon: <DashboardOutlinedIcon /> },
+    { label: 'Profil', path: '/student/profile', icon: <PersonOutlineOutlinedIcon /> },
     { label: 'Davamiyyətim', path: '/student/attendance', icon: <FactCheckOutlinedIcon /> },
     { label: 'Ödənişlərim', path: '/student/payments', icon: <PaymentOutlinedIcon /> },
     { label: 'Materiallar', path: '/student/materials', icon: <MenuBookOutlinedIcon /> },
+    { label: 'Ayarlar', path: '/student/settings', icon: <SettingsOutlinedIcon /> },
   ],
   teacher: [
     { label: 'İdarə paneli', path: '/teacher/dashboard', icon: <DashboardOutlinedIcon /> },
@@ -35,6 +37,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { label: 'Davamiyyət', path: '/teacher/attendance', icon: <FactCheckOutlinedIcon /> },
     { label: 'Qiymət və qeyd', path: '/teacher/grades', icon: <EditNoteOutlinedIcon /> },
     { label: 'Profil', path: '/teacher/profile', icon: <PersonOutlineOutlinedIcon /> },
+    { label: 'Ayarlar', path: '/teacher/settings', icon: <SettingsOutlinedIcon /> },
   ],
   admin: [
     { label: 'İdarə paneli', path: '/admin/dashboard', icon: <DashboardOutlinedIcon /> },
